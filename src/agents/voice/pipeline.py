@@ -128,6 +128,7 @@ class VoicePipeline:
             try:
                 async for intro_text in self.workflow.on_start():
                     await output._add_text(intro_text)
+                    await output._turn_done()
             except Exception as e:
                 logger.warning(f"on_start() failed: {e}")
 
@@ -150,8 +151,8 @@ class VoicePipeline:
                     await output._add_error(e)
                     raise e
                 finally:
-                    await transcription_session.close()
                     await output._turn_done()
+                    await transcription_session.close()
                     await output._done()
 
             output._set_task(asyncio.create_task(process_turns()))
