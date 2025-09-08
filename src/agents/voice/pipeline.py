@@ -151,6 +151,7 @@ class VoicePipeline:
                     raise e
                 finally:
                     await transcription_session.close()
+                    await output._turn_done()
                     await output._done()
 
             output._set_task(asyncio.create_task(process_turns()))
