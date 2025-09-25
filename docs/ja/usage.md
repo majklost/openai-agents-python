@@ -4,21 +4,21 @@ search:
 ---
 # 使用状況
 
-Agents SDK は、すべての実行についてトークン使用状況を自動的に追跡します。実行コンテキストから参照でき、コストの監視、制限の適用、分析の記録に利用できます。
+Agents SDK は各 run のトークン使用状況を自動で追跡します。run のコンテキストから参照でき、コストの監視、上限の適用、分析の記録に利用できます。
 
 ## 追跡対象
 
-- **requests**: 実行された LLM API 呼び出し数
+- **requests**: 実行された LLM API 呼び出しの回数
 - **input_tokens**: 送信された入力トークンの合計
 - **output_tokens**: 受信した出力トークンの合計
-- **total_tokens**: 入力 + 出力
+- **total_tokens**: input + output
 - **details**:
   - `input_tokens_details.cached_tokens`
   - `output_tokens_details.reasoning_tokens`
 
-## 実行からの使用状況へのアクセス
+## 実行からの使用状況の取得
 
-`Runner.run(...)` の後、`result.context_wrapper.usage` から使用状況にアクセスします。
+`Runner.run(...)` の後、`result.context_wrapper.usage` から使用状況にアクセスできます。
 
 ```python
 result = await Runner.run(agent, "What's the weather in Tokyo?")
@@ -30,11 +30,29 @@ print("Output tokens:", usage.output_tokens)
 print("Total tokens:", usage.total_tokens)
 ```
 
-使用状況は、実行中のすべてのモデル呼び出し（ツール呼び出しやハンドオフを含む）にわたって集計されます。
+使用状況は run 中のすべてのモデル呼び出し（ツール呼び出しやハンドオフを含む）を集計します。
 
-## セッションでの使用状況へのアクセス
+### LiteLLM モデルでの使用状況の有効化
 
-`Session`（例: `SQLiteSession`）を使用する場合、`Runner.run(...)` の各呼び出しは、その実行に特有の使用状況を返します。セッションは文脈のために会話履歴を保持しますが、各実行の使用状況は独立しています。
+LiteLLM プロバイダーはデフォルトでは使用状況メトリクスを報告しません。[`LitellmModel`](models/litellm.md) を使用する場合、エージェントに `ModelSettings(include_usage=True)` を渡すと、LiteLLM のレスポンスが `result.context_wrapper.usage` に反映されます。
+
+```python
+from agents import Agent, ModelSettings, Runner
+from agents.extensions.models.litellm_model import LitellmModel
+
+agent = Agent(
+    name="Assistant",
+    model=LitellmModel(model="your/model", api_key="..."),
+    model_settings=ModelSettings(include_usage=True),
+)
+
+result = await Runner.run(agent, "What's the weather in Tokyo?")
+print(result.context_wrapper.usage.total_tokens)
+```
+
+## セッションでの使用状況の取得
+
+`Session`（例: `SQLiteSession`）を使用する場合、`Runner.run(...)` の各呼び出しはその特定の run の使用状況を返します。セッションはコンテキスト用に会話履歴を保持しますが、各 run の使用状況は独立しています。
 
 ```python
 session = SQLiteSession("my_conversation")
@@ -46,9 +64,9 @@ second = await Runner.run(agent, "Can you elaborate?", session=session)
 print(second.context_wrapper.usage.total_tokens)  # Usage for second run
 ```
 
-セッションは実行間で会話コンテキストを保持しますが、各 `Runner.run()` 呼び出しで返される使用状況メトリクスは、その実行のみを表します。セッションでは、各実行に先行メッセージが入力として再投入されることがあり、その結果、後続ターンの入力トークン数に影響します。
+セッションは run 間で会話コンテキストを保持しますが、各 `Runner.run()` 呼び出しで返される使用状況メトリクスは、その実行のみを表します。セッションでは、前のメッセージが各 run の入力として再投入されることがあり、その結果、後続ターンの入力トークン数に影響します。
 
-## フックでの使用状況の活用
+## フックでの使用状況の利用
 
 `RunHooks` を使用している場合、各フックに渡される `context` オブジェクトには `usage` が含まれます。これにより、重要なライフサイクルのタイミングで使用状況を記録できます。
 
@@ -61,8 +79,8 @@ class MyHooks(RunHooks):
 
 ## API リファレンス
 
-詳細な API ドキュメントは以下をご覧ください。
+詳細な API ドキュメントは以下を参照してください。
 
--   [`Usage`][agents.usage.Usage] - 使用状況の追跡データ構造
--   [`RunContextWrapper`][agents.run.RunContextWrapper] - 実行コンテキストから使用状況にアクセス
--   [`RunHooks`][agents.run.RunHooks] - 使用状況トラッキングのライフサイクルへのフック
+- [`Usage`][agents.usage.Usage] - 使用状況の追跡データ構造
+- [`RunContextWrapper`][agents.run.RunContextWrapper] - run コンテキストから使用状況へアクセス
+- [`RunHooks`][agents.run.RunHooks] - 使用状況トラッキングのライフサイクルにフックする

@@ -163,11 +163,16 @@ class OpenAISTTTranscriptionSession(StreamedTranscriptionSession):
         await self._websocket.send(
             json.dumps(
                 {
-                    "type": "transcription_session.update",
+                    "type": "session.update",
                     "session": {
-                        "input_audio_format": "pcm16",
-                        "input_audio_transcription": {"model": self._model},
-                        "turn_detection": self._turn_detection,
+                        "type": "transcription",
+                        "audio": {
+                            "input": {
+                                "format": {"type": "audio/pcm", "rate": 24000},
+                                "transcription": {"model": self._model},
+                                "turn_detection": self._turn_detection,
+                            }
+                        },
                     },
                 }
             )
@@ -278,7 +283,6 @@ class OpenAISTTTranscriptionSession(StreamedTranscriptionSession):
                 "wss://api.openai.com/v1/realtime?intent=transcription",
                 additional_headers={
                     "Authorization": f"Bearer {self._client.api_key}",
-                    "OpenAI-Beta": "realtime=v1",
                     "OpenAI-Log-Session": "1",
                 },
             ) as ws:
