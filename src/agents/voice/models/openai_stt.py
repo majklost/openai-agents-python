@@ -257,6 +257,7 @@ class OpenAISTTTranscriptionSession(StreamedTranscriptionSession):
         while True:
             buffer = await audio_queue.get()
             if buffer is None:
+                await self._output_queue.put(SessionCompleteSentinel())
                 break
 
             self._turn_audio_buffer.append(buffer)
