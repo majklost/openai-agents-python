@@ -20,6 +20,7 @@ from ..tool import Tool
 
 RealtimeModelName: TypeAlias = Union[
     Literal[
+        "gpt-realtime-mini",
         "gpt-realtime",
         "gpt-realtime-2025-08-28",
         "gpt-4o-realtime-preview",
@@ -54,7 +55,9 @@ class RealtimeInputAudioTranscriptionConfig(TypedDict):
     language: NotRequired[str]
     """The language code for transcription."""
 
-    model: NotRequired[Literal["gpt-4o-transcribe", "gpt-4o-mini-transcribe", "whisper-1"] | str]
+    model: NotRequired[
+        Literal["gpt-4o-transcribe", "gpt-4o-mini-transcribe", "whisper-1"] | str
+    ]
     """The transcription model to use."""
 
     prompt: NotRequired[str]
@@ -126,7 +129,9 @@ class RealtimeSessionModelSettings(TypedDict):
     input_audio_transcription: NotRequired[RealtimeInputAudioTranscriptionConfig]
     """Configuration for transcribing input audio."""
 
-    input_audio_noise_reduction: NotRequired[RealtimeInputAudioNoiseReductionConfig | None]
+    input_audio_noise_reduction: NotRequired[
+        RealtimeInputAudioNoiseReductionConfig | None
+    ]
     """Noise reduction configuration for input audio."""
 
     turn_detection: NotRequired[RealtimeTurnDetectionConfig]
