@@ -6,7 +6,7 @@ from agents.realtime import RealtimeAgent, realtime_handoff
 When running the UI example locally, you can edit this file to change the setup. THe server
 will use the agent returned from get_starting_agent() as the starting agent."""
 
-### TOOLS
+# TOOLS
 
 
 @function_tool(
@@ -80,7 +80,7 @@ triage_agent = RealtimeAgent(
     handoff_description="A triage agent that can delegate a customer's request to the appropriate agent.",
     instructions=(
         f"{RECOMMENDED_PROMPT_PREFIX} "
-        "You are a helpful triaging agent. You can use your tools to delegate questions to other appropriate agents."
+        "You are a helpful triaging agent. You can use your tools to delegate questions to other appropriate agents. Do not answer question outside your scope of usage. Only answer questions about the airline if you are sure of the answer. "
     ),
     handoffs=[faq_agent, realtime_handoff(seat_booking_agent)],
 )

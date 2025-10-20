@@ -41,8 +41,10 @@ class VoicePipeline:
         self.workflow = workflow
         self.stt_model = stt_model if isinstance(stt_model, STTModel) else None
         self.tts_model = tts_model if isinstance(tts_model, TTSModel) else None
-        self._stt_model_name = stt_model if isinstance(stt_model, str) else None
-        self._tts_model_name = tts_model if isinstance(tts_model, str) else None
+        self._stt_model_name = stt_model if isinstance(
+            stt_model, str) else None
+        self._tts_model_name = tts_model if isinstance(
+            tts_model, str) else None
         self.config = config or VoicePipelineConfig()
 
     async def run(self, audio_input: AudioInput | StreamedAudioInput) -> StreamedAudioResult:
@@ -62,16 +64,19 @@ class VoicePipeline:
         elif isinstance(audio_input, StreamedAudioInput):
             return await self._run_multi_turn(audio_input)
         else:
-            raise UserError(f"Unsupported audio input type: {type(audio_input)}")
+            raise UserError(
+                f"Unsupported audio input type: {type(audio_input)}")
 
     def _get_tts_model(self) -> TTSModel:
         if not self.tts_model:
-            self.tts_model = self.config.model_provider.get_tts_model(self._tts_model_name)
+            self.tts_model = self.config.model_provider.get_tts_model(
+                self._tts_model_name)
         return self.tts_model
 
     def _get_stt_model(self) -> STTModel:
         if not self.stt_model:
-            self.stt_model = self.config.model_provider.get_stt_model(self._stt_model_name)
+            self.stt_model = self.config.model_provider.get_stt_model(
+                self._stt_model_name)
         return self.stt_model
 
     async def _process_audio_input(self, audio_input: AudioInput) -> str:
@@ -151,7 +156,7 @@ class VoicePipeline:
                     await output._add_error(e)
                     raise e
                 finally:
-                    await output._turn_done()
+                    # await output._turn_done()
                     await transcription_session.close()
                     await output._done()
 

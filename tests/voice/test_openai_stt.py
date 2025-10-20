@@ -190,7 +190,8 @@ async def test_stream_audio_sends_correct_json():
         (
             {"type": "transcription_session.created"},
             {"type": "transcription_session.updated"},
-            {"type": "input_audio_transcription_completed", "transcript": "Hello world!"},
+            {"type": "input_audio_transcription_completed",
+                "transcript": "Hello world!"},
         ),
         (
             {"type": "session.created"},
@@ -282,7 +283,8 @@ async def test_timeout_waiting_for_created_event(monkeypatch):
             async for _ in turns:
                 pass
 
-        assert "Timeout waiting for transcription_session.created event" in str(exc_info.value)
+        assert "Timeout waiting for transcription_session.created event" in str(
+            exc_info.value)
 
         await session.close()
 
@@ -373,8 +375,69 @@ async def test_inactivity_timeout():
             async for turn in session.transcribe_turns():
                 collected_turns.append(turn)
 
-        assert "Timeout waiting for transcription_session" in str(exc_info.value)
+        assert "Timeout waiting for transcription_session" in str(
+            exc_info.value)
 
-        assert len(collected_turns) == 0, "No transcripts expected, but we got something?"
+        assert len(
+            collected_turns) == 0, "No transcripts expected, but we got something?"
 
         await session.close()
+
+
+@pytest.mark.asyncio
+async def test_stream_audio_terminates_on_none_buffer():
+    """
+    Test that when the audio input queue is closed (receives None),
+    the _stream_audio task puts a SessionCompleteSentinel on the output queue,
+    which in turn causes transcribe_turns() to terminate gracefully.
+    This test verifies a fix for a termination hang.
+    """
+    # We only need the session to connect successfully. After that, the websocket
+    # can be silent. The termination signal comes from the audio queue.
+    mock_ws = create_mock_websocket(
+        [
+            json.dumps({"type": "transcription_session.created"}),
+            json.dumps({"type": "transcription_session.updated"}),
+            # No more messages. The test will hang here if the fix is not present.
+        ]
+    )
+
+    with patch("websockets.connect", return_value=mock_ws):
+        # Prepare
+        audio_input = StreamedAudioInput()
+        stt_settings = STTModelSettings()
+
+        session = OpenAISTTTranscriptionSession(
+            input=audio_input,
+            client=AsyncMock(api_key="FAKE_KEY"),
+            model="whisper-1",
+            settings=stt_settings,
+            trace_include_sensitive_data=False,
+            trace_include_sensitive_audio_data=False,
+        )
+
+        async def consume_turns():
+            # This task will run the generator to completion.
+            # Without the fix, this task would hang indefinitely on `async for`.
+            async for _ in session.transcribe_turns():
+                pass
+
+        # Start consuming the generator in the background
+        consumer_task = asyncio.create_task(consume_turns())
+
+        # Wait until the session is fully connected and tasks are running
+        while not session.connected:
+            await asyncio.sleep(0.01)
+
+        # Simulate some audio data, then close the stream
+        # await audio_input.add_audio(np.array([1, 2, 3], dtype=np.int16))
+        await audio_input.add_audio(None)  # Puts None on the queue
+
+        # Wait for the consumer task to finish.
+        # We use a timeout to prevent the test from hanging if the fix is not working.
+        try:
+            await asyncio.wait_for(consumer_task, timeout=2.0)
+        except asyncio.TimeoutError:
+            pytest.fail("The transcribe_turns() generator did not terminate.")
+        finally:
+            await session.close()
